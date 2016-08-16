@@ -1,0 +1,6 @@
+# The bod directory is the directory where OpenPoGoBot is.
+bot_directory: '/path/to/bot/directory'
+
+# List of bots and the paths to their config.yml files, relative to the bot_directory
+bots:
+    bot_name: 'path/to/config.yml'
