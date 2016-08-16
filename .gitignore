@@ -2,4 +2,7 @@
 
 env/
 config/
+config.yml
 *.log
+
+.manager.json
