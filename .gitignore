@@ -1,8 +1,8 @@
 .idea
 
-env/
 config/
 config.yml
-*.log
+env/
+logs/*.log
 
 .manager.json

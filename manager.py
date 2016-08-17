@@ -15,7 +15,11 @@ import ruamel.yaml
 
 locale.setlocale(locale.LC_ALL, '')
 
+
 class ProfileManager():
+    MODE_SINGLE_BOT = 1
+    MODE_MULTI_BOT = 2
+
     def __init__(self):
 
         with open('config.yml', 'r') as config_file:
@@ -23,6 +27,7 @@ class ProfileManager():
             self.bots = config['bots']
             self.bot_directory = config['bot_directory']
 
+        self.bot_mode = None
         self.current_bot = None
         self.bot_states = {}
         self.bot_processes = {}
@@ -41,39 +46,92 @@ class ProfileManager():
             )
             return
 
-        while not self.current_bot:
+        while self.bot_mode is None:
             self.select_bot()
 
         while True:
-            self.screen.clear()
-            self.screen.addstr(1, 2, 'OpenPoGoBot Manager')
-            self.screen.addstr(2, 2, '===================')
-            i = self.draw_profile_table(3, 2)
-            self.screen.addstr(i, 4, '1 - Start bot')
-            i += 1
-            self.screen.addstr(i, 4, '2 - Stop bot')
-            i += 1
-            self.screen.addstr(i, 4, '3 - Show Logs')
-            i += 1
-            self.screen.addstr(i, 4, 'c - Change Bot')
-            i += 1
-            self.screen.addstr(i, 4, 'q - Exit')
-            i += 2
-            self.screen.addstr(i, 4, 'Choose an option: ')
-            choice = self.screen.getstr(i, 22)
-
-            if choice == '1':
-                self.start_bot()
-            elif choice == '2':
-                self.stop_bot()
-            elif choice == '3':
-                self.bot_log()
-            elif choice == 'c':
-                self.current_bot = None
+            if self.bot_mode == self.MODE_SINGLE_BOT:
                 while not self.current_bot:
                     self.select_bot()
-            elif choice == 'q':
-                break
+
+                choice = 0
+
+                while choice == 0:
+                    self.screen.clear()
+                    self.screen.addstr(1, 2, 'OpenPoGoBot Manager > Single Bot')
+                    self.screen.addstr(2, 2, '================================')
+                    i = self.draw_profile_table(3, 2)
+                    self.screen.addstr(i, 4, '1 - Start bot')
+                    i += 1
+                    self.screen.addstr(i, 4, '2 - Stop bot')
+                    i += 1
+                    self.screen.addstr(i, 4, '3 - Show Logs')
+                    i += 1
+                    self.screen.addstr(i, 4, 'c - Change Bot')
+                    i += 1
+                    self.screen.addstr(i, 4, '--------------------------------')
+                    i += 1
+                    self.screen.addstr(i, 4, 'm - Multi Bot Mode')
+                    i += 1
+                    self.screen.addstr(i, 4, 'q - Exit')
+                    i += 2
+                    self.screen.addstr(i, 4, 'Choose an option: ')
+                    choice = self.screen.getstr(i, 22)
+
+                    if choice == '1':
+                        self.start_bot()
+                    elif choice == '2':
+                        self.stop_bot()
+                    elif choice == '3':
+                        self.bot_log()
+                    elif choice == 'm':
+                        self.current_bot = None
+                        self.bot_mode = self.MODE_MULTI_BOT
+                    elif choice == 'c':
+                        self.current_bot = None
+                    elif choice == 'q':
+                        curses.endwin()
+                        return
+            else:
+                choice = 0
+
+                while choice == 0:
+                    self.screen.clear()
+                    self.screen.addstr(1, 2, 'OpenPoGoBot Manager > Multi Bot')
+                    self.screen.addstr(2, 2, '===============================')
+                    i = self.draw_profile_table(3, 2)
+                    self.screen.addstr(i, 4, '1 - Start Bots')
+                    i += 1
+                    self.screen.addstr(i, 4, '2 - Stop Bots')
+                    i += 1
+                    self.screen.addstr(i, 4, '3 - Show Logs')
+                    i += 1
+                    self.screen.addstr(i, 4, '-------------------------------')
+                    i += 1
+                    self.screen.addstr(i, 4, 's - Single Bot Mode')
+                    i += 1
+                    self.screen.addstr(i, 4, 'q - Exit')
+                    i += 2
+                    self.screen.addstr(i, 4, 'Choose an option: ')
+
+                    choice = self.screen.getstr(i, 22)
+
+                    if choice == '1':
+                        self.start_all_bots()
+                        choice = 0  # Stay on this screen
+                    elif choice == '2':
+                        self.stop_all_bots()
+                        choice = 0  # Stay on this screen
+                    elif choice == '3':
+                        self.all_bot_logs()
+                        choice = 0  # Stay on this screen
+                    elif choice == 's':
+                        self.bot_mode = self.MODE_SINGLE_BOT
+                    elif choice == 'q':
+                        curses.endwin()
+                        return
+                    else:
+                        choice = 0
 
         curses.endwin()
 
@@ -148,26 +206,78 @@ class ProfileManager():
         i = self.draw_profile_table(3, 2)
 
         if len(self.bots) == 0:
-            self.screen.addstr(i, 2, 'Please add an bot first...')
+            self.screen.addstr(i, 2, 'Please add a bot first...')
             self.screen.getch()
             return
 
-        self.screen.addstr(i, 2, 'Enter bot number:')
+        self.screen.addstr(i, 2, 'Enter bot number or "m" for multi bot:')
         bot_index = self.screen.getstr(i, 52)
 
         # Get the profile name from the profile index
         try:
-            self.current_bot = self.get_bot_name(i, bot_index)
+            if bot_index == 'm':
+                self.bot_mode = self.MODE_MULTI_BOT
+            else:
+                self.current_bot = self.get_bot_name(i, bot_index)
+                self.bot_mode = self.MODE_SINGLE_BOT
         except ValueError:
             return
+
+    def start_all_bots(self):
+        self.screen.clear()
+        self.screen.addstr(
+            1, 2, 'OpenPoGoBot Manager > Multi Bot > Start'
+        )
+        self.screen.addstr(
+            2, 2, '======================================='
+        )
+        i = self.draw_profile_table(3, 2)
+        i += 1
+
+        for bot_name in self.bots:
+            if bot_name not in self.bot_states:
+                self._start_bot(bot_name)
+
+                self.screen.addstr(i, 2, 'Started "{}"!'.format(bot_name))
+                i += 1
+
+    def stop_all_bots(self):
+        self.screen.clear()
+        self.screen.addstr(
+            1, 2, 'OpenPoGoBot Manager > Multi Bot > Stop'
+        )
+        self.screen.addstr(
+            2, 2, '======================================'
+        )
+        i = self.draw_profile_table(3, 2)
+        i += 1
+
+        for bot_name in self.bots:
+            if bot_name not in self.bot_states:
+                self._stop_bot(bot_name)
+
+                self.screen.addstr(i, 2, 'Stopped "{}"!'.format(bot_name))
+                i += 1
+
+    def all_bot_logs(self):
+        self.screen.clear()
+        self.screen.addstr(
+            1, 2, 'OpenPoGoBot Manager > Multi Bot > Logs'
+        )
+        self.screen.addstr(
+            2, 2, '======================================'
+        )
+        i = 3
+
+        self._bot_logs(i, self.bots.keys())
 
     def start_bot(self):
         self.screen.clear()
         self.screen.addstr(
-            1, 2, 'OpenPoGoBot Manager > Start a bot'
+            1, 2, 'OpenPoGoBot Manager > Single Bot > Start'
         )
         self.screen.addstr(
-            2, 2, '================================='
+            2, 2, '========================================'
         )
         i = self.draw_profile_table(3, 2)
         i += 1
@@ -177,18 +287,9 @@ class ProfileManager():
             self.screen.getch()
             return
 
-        log_file = io.open(self.current_bot + '.log', 'a')
-        p = subprocess.Popen(['python', 'pokecli.py', self.bots[self.current_bot]], cwd=self.bot_directory,
-                             stdout=log_file, stderr=log_file)
+        self._start_bot(self.current_bot)
 
-        self.bot_states[self.current_bot] = {
-            'pid': p.pid,
-        }
-        self._write_bot_states()
-
-        self.bot_processes[self.current_bot] = p
-
-        self.screen.addstr(i, 2, 'Started "{}"!'.format(self.current_bot))
+        self.screen.addstr(i, 2, 'Started "{}"!'.format(bot_name))
         i += 1
 
         self.screen.getch()
@@ -196,10 +297,10 @@ class ProfileManager():
     def stop_bot(self):
         self.screen.clear()
         self.screen.addstr(
-            1, 2, 'OpenPoGoBot Manager > Stop a bot'
+            1, 2, 'OpenPoGoBot Manager > Single Bot > Stop'
         )
         self.screen.addstr(
-            2, 2, '================================='
+            2, 2, '======================================='
         )
         i = self.draw_profile_table(3, 2)
         i += 1
@@ -209,14 +310,7 @@ class ProfileManager():
             self.screen.getch()
             return
 
-        try:
-            self.bot_processes[self.current_bot].terminate()
-            del self.bot_processes[self.current_bot]
-        except OSError:
-            pass  # process already dead
-
-        del self.bot_states[self.current_bot]
-        self._write_bot_states()
+        self._stop_bot(self.current_bot)
 
         self.screen.addstr(i, 2, 'Bot "{}" has been stopped'.format(self.current_bot))
 
@@ -225,10 +319,10 @@ class ProfileManager():
     def bot_log(self):
         self.screen.clear()
         self.screen.addstr(
-            1, 2, 'OpenPoGoBot Manager > Bot Log'
+            1, 2, 'OpenPoGoBot Manager > Single Bot > Log'
         )
         self.screen.addstr(
-            2, 2, '================================='
+            2, 2, '======================================'
         )
         i = self.draw_profile_table(3, 2)
         i += 1
@@ -239,22 +333,7 @@ class ProfileManager():
             return
 
         i += 1
-
-        self.screen.timeout(1)
-        log_top = i
-        while True:
-            pressed = self.screen.getch()
-            if pressed == ord('q'):
-                break
-
-            tick_top = log_top
-            with io.open(self.current_bot + '.log', 'r') as log_file:
-                for line in self.tail(log_file, 10):
-                    self.screen.addstr(tick_top, 2, line)
-                    tick_top += 1
-
-        self.screen.timeout(-1)
-        self.screen.getch()
+        self._bot_logs(i, [self.current_bot])
 
     def is_bot_running(self, bot_name):
         if bot_name in self.bot_processes:
@@ -282,6 +361,55 @@ class ProfileManager():
                 lines = list(f)
             pos *= 2
         return lines[-n:]
+
+    def _start_bot(self, bot_name):
+        log_file = io.open('logs/' + bot_name + '.log', 'a')
+        p = subprocess.Popen(['python', 'pokecli.py', self.bots[bot_name]], cwd=self.bot_directory,
+                             stdout=log_file, stderr=log_file)
+
+        self.bot_states[bot_name] = {
+            'pid': p.pid,
+        }
+        self._write_bot_states()
+
+        self.bot_processes[bot_name] = p
+
+    def _stop_bot(self, bot_name):
+        try:
+            if bot_name in self.bot_processes:
+                self.bot_processes[bot_name].terminate()
+                del self.bot_processes[bot_name]
+            elif bot_name in self.bot_states:
+                # The bot was started by a previous instance of the manager, so we must just kill it
+                os.kill(self.bot_states[bot_name]['pid'], signal.SIGTERM)
+        except OSError:
+            pass  # process already dead
+
+        if bot_name in self.bot_states:
+            del self.bot_states[bot_name]
+
+        self._write_bot_states()
+
+    def _bot_logs(self, screen_top, bot_names):
+        self.screen.timeout(1)
+        while True:
+            pressed = self.screen.getch()
+            if pressed == ord('q'):
+                self.screen.timeout(-1)
+                return
+
+            for i, bot_name in enumerate(bot_names):
+                screen_line_pointer = screen_top + (12 * i)
+                status = bot_name in self.bot_states
+                self.screen.addstr(screen_line_pointer, 2, '{} ({}):'.format(bot_name, 'running' if status else 'Stopped'))
+                screen_line_pointer += 1
+                if os.path.isfile('logs/' + bot_name + '.log'):
+                    with io.open('logs/' + bot_name + '.log', 'r') as log_file:
+                        for line in self.tail(log_file, 10):
+                            self.screen.addstr(screen_line_pointer, 2, line)
+                            screen_line_pointer += 1
+                else:
+                    self.screen.addstr(screen_line_pointer, 2, 'No logs found for "{}"'.format(bot_name))
 
     def _write_bot_states(self):
         with open('.manager.json', 'w+') as bot_states_cache:

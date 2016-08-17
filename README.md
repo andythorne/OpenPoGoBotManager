@@ -7,6 +7,7 @@ This package manages a multi-bot configuration with a curses based UI.
 virtualenv env
 source env/bin/activate # on Windows: env\Scripts\activate.bat
 pip install -r requirements.txt
+pip install -r /path/to/openpogobot/requirements.txt
 ```
 
 ## Configuration
