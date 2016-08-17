@@ -289,7 +289,7 @@ class ProfileManager():
 
         self._start_bot(self.current_bot)
 
-        self.screen.addstr(i, 2, 'Started "{}"!'.format(bot_name))
+        self.screen.addstr(i, 2, 'Started "{}"!'.format(self.current_bot))
         i += 1
 
         self.screen.getch()
